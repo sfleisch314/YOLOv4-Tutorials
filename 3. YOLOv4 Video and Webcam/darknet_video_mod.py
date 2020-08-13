@@ -1,4 +1,5 @@
 from ctypes import *                                               # Import libraries
+import sys
 import math
 import random
 import os
@@ -46,7 +47,7 @@ def cvDrawBoxes(detections, img):
             detection[2][1],\
             detection[2][2],\
             detection[2][3]
-        name_tag = str(detection[0].decode())
+        name_tag = detection[0]
         for name_key, color_val in color_dict.items():
             if name_key == name_tag:
                 color = color_val 
@@ -55,25 +56,22 @@ def cvDrawBoxes(detections, img):
                 pt1 = (xmin, ymin)
                 pt2 = (xmax, ymax)
                 cv2.rectangle(img, pt1, pt2, color, 1)
-                cv2.putText(img,
-                            detection[0].decode() +
-                            " [" + str(round(detection[1] * 100, 2)) + "]",
+                print(detection[1])
+                cv2.putText(img,f'{detection[0]} [{round(float(detection[1]) * 100, 2)}]',
                             (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                             color, 2)
     return img
 
 
-netMain = None
-metaMain = None
 altNames = None
 
 
 def YOLO():
    
-    global metaMain, netMain, altNames
-    configPath = "./cfg/yolov4.cfg"                                 # Path to cfg
-    weightPath = "./yolov4.weights"                                 # Path to weights
-    metaPath = "./cfg/coco.data"                                    # Path to meta data
+    global altNames
+    configPath = "../cfg/yolov4.cfg"                                 # Path to cfg
+    weightPath = "../yolov4.weights"                                 # Path to weights
+    metaPath = "../cfg/coco.data"                                    # Path to meta data
     if not os.path.exists(configPath):                              # Checks whether file exists otherwise return ValueError
         raise ValueError("Invalid config path `" +
                          os.path.abspath(configPath)+"`")
@@ -83,18 +81,15 @@ def YOLO():
     if not os.path.exists(metaPath):
         raise ValueError("Invalid data file path `" +
                          os.path.abspath(metaPath)+"`")
-    if netMain is None:                                             # Checks the metaMain, NetMain and altNames. Loads it in script
-        netMain = darknet.load_net_custom(configPath.encode( 
-            "ascii"), weightPath.encode("ascii"), 0, 1)             # batch size = 1
-    if metaMain is None:
-        metaMain = darknet.load_meta(metaPath.encode("ascii"))
+    network,class_names,class_colors=darknet.load_network(configPath,metaPath,weightPath,batch_size=1)
+
     if altNames is None:
         try:
+            # Read the metadata file and find the class names file path.
             with open(metaPath) as metaFH:
                 metaContents = metaFH.read()
                 import re
-                match = re.search("names *= *(.*)$", metaContents,
-                                  re.IGNORECASE | re.MULTILINE)
+                match = re.search("names *= *(.*)$", metaContents, re.IGNORECASE | re.MULTILINE)
                 if match:
                     result = match.group(1)
                 else:
@@ -109,13 +104,13 @@ def YOLO():
         except Exception:
             pass
     #cap = cv2.VideoCapture(0)                                      # Uncomment to use Webcam
-    cap = cv2.VideoCapture("test2.mp4")                             # Local Stored video detection - Set input video
+    cap = cv2.VideoCapture("../data/test50.mp4")                             # Local Stored video detection - Set input video
+    #cap = cv2.VideoCapture("../data/Video_for_Testing.mp4")                             # Local Stored video detection - Set input video
     frame_width = int(cap.get(3))                                   # Returns the width and height of capture video
     frame_height = int(cap.get(4))
     # Set out for video writer
     out = cv2.VideoWriter(                                          # Set the Output path for video writer
-        "./Demo/output.avi", cv2.VideoWriter_fourcc(*"MJPG"), 10.0,
-        (frame_width, frame_height))
+        "./Demo/output.avi", cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (frame_width, frame_height))
 
     print("Starting the YOLO loop...")
 
@@ -135,7 +130,8 @@ def YOLO():
 
         darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())                # Copy that frame bytes to darknet_image
 
-        detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)    # Detection occurs at this line and return detections, for customize we can change the threshold.                                                                                   
+        detections = darknet.detect_image(network, class_names, darknet_image, thresh=0.25) # Detection occurs at this line and return
+                                                                                            # detections, for customize we can change the threshold.                                                                                   
         image = cvDrawBoxes(detections, frame_resized)               # Call the function cvDrawBoxes() for colored bounding box per class
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         print(1/(time.time()-prev_time))
