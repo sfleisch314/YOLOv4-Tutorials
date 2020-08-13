@@ -66,7 +66,7 @@ def cvDrawBoxes(detections, img):
         objectId = 0								# We inialize a variable called ObjectId and set it to 0
         for detection in detections:				# In this if statement, we filter all the detections for persons only
             # Check for the only person name tag 
-            name_tag = str(detection[0].decode())   # Coco file has string of all the names
+            name_tag = detection[0]   # Coco file has string of all the names
             if name_tag == 'person':                
                 x, y, w, h = detection[2][0],\
                             detection[2][1],\
@@ -119,8 +119,6 @@ def cvDrawBoxes(detections, img):
     return img
 
 
-netMain = None
-metaMain = None
 altNames = None
 
 
@@ -128,7 +126,7 @@ def YOLO():
     """
     Perform Object detection
     """
-    global metaMain, netMain, altNames
+    global altNames
     configPath = "./cfg/yolov4.cfg"
     weightPath = "./yolov4.weights"
     metaPath = "./cfg/coco.data"
@@ -141,11 +139,7 @@ def YOLO():
     if not os.path.exists(metaPath):
         raise ValueError("Invalid data file path `" +
                          os.path.abspath(metaPath)+"`")
-    if netMain is None:
-        netMain = darknet.load_net_custom(configPath.encode(
-            "ascii"), weightPath.encode("ascii"), 0, 1)  # batch size = 1
-    if metaMain is None:
-        metaMain = darknet.load_meta(metaPath.encode("ascii"))
+    network,class_names,class_colors=darknet.load_network(configPath,metaPath,weightPath,batch_size=1)
     if altNames is None:
         try:
             with open(metaPath) as metaFH:
@@ -196,7 +190,7 @@ def YOLO():
 
         darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())
 
-        detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
+        detections = darknet.detect_image(network, class_names, darknet_image, thresh=0.25)
         image = cvDrawBoxes(detections, frame_resized)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         print(1/(time.time()-prev_time))

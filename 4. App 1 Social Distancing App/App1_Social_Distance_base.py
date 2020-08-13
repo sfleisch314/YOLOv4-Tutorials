@@ -87,7 +87,7 @@ def YOLO():
     """
     Perform Object detection
     """
-    global metaMain, netMain, altNames
+    global altNames
     configPath = "./cfg/yolov4.cfg"
     weightPath = "./yolov4.weights"
     metaPath = "./cfg/coco.data"
@@ -100,11 +100,7 @@ def YOLO():
     if not os.path.exists(metaPath):
         raise ValueError("Invalid data file path `" +
                          os.path.abspath(metaPath)+"`")
-    if netMain is None:
-        netMain = darknet.load_net_custom(configPath.encode(
-            "ascii"), weightPath.encode("ascii"), 0, 1)  # batch size = 1
-    if metaMain is None:
-        metaMain = darknet.load_meta(metaPath.encode("ascii"))
+    network,class_names,class_colors=darknet.load_network(configPath,metaPath,weightPath,batch_size=1)
     if altNames is None:
         try:
             with open(metaPath) as metaFH:
@@ -155,7 +151,7 @@ def YOLO():
 
         darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())
 
-        detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
+        detections = darknet.detect_image(network, class_names, darknet_image, thresh=0.25)
         image = cvDrawBoxes(detections, frame_resized)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         print(1/(time.time()-prev_time))
