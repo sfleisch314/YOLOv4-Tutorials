@@ -35,8 +35,6 @@ def cvDrawBoxes(detections, img):
     #=================================================================#
 
 
-netMain = None
-metaMain = None
 altNames = None
 
 
@@ -55,11 +53,7 @@ def YOLO(image_list):
     if not os.path.exists(metaPath):
         raise ValueError("Invalid data file path `" +
                          os.path.abspath(metaPath)+"`")
-    if netMain is None:
-        netMain = darknet.load_net_custom(configPath.encode(
-            "ascii"), weightPath.encode("ascii"), 0, 1)  # batch size = 1
-    if metaMain is None:
-        metaMain = darknet.load_meta(metaPath.encode("ascii"))
+    network,class_names,class_colors=darknet.load_network(configPath,metaPath,weightPath,batch_size=1)
     if altNames is None:
         try:
             with open(metaPath) as metaFH:
@@ -96,7 +90,7 @@ def YOLO(image_list):
 
         darknet.copy_image_from_bytes(darknet_image, image_rgb.tobytes())
 
-        detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
+        detections = darknet.detect_image(network, class_names, darknet_image, thresh=0.25)
         image = cvDrawBoxes(detections, image_rgb)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         cv2.imshow('Output', image)

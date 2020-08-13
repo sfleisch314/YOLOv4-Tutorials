@@ -23,7 +23,7 @@ def cvDrawBoxes(detections, img):
     if len(detections) > 0:    								# If there are any detections
         car_detection = 0
         for detection in detections:						# For each detection
-            name_tag = detection[0].decode()				# Decode list of classes 
+            name_tag = detection[0]             			# Decode list of classes 
             if name_tag == 'car':							# Filter detections for car class
 	            x, y, w, h = detection[2][0],\
 	                detection[2][1],\
@@ -42,14 +42,12 @@ def cvDrawBoxes(detections, img):
     #=================================================================#
 
 
-netMain = None
-metaMain = None
 altNames = None
 
 
 def YOLO(image_list):
 
-    global metaMain, netMain, altNames
+    global altNames
     configPath = "./cfg/yolov4.cfg"
     weightPath = "./yolov4.weights"
     metaPath = "./cfg/coco.data"
@@ -62,11 +60,7 @@ def YOLO(image_list):
     if not os.path.exists(metaPath):
         raise ValueError("Invalid data file path `" +
                          os.path.abspath(metaPath)+"`")
-    if netMain is None:
-        netMain = darknet.load_net_custom(configPath.encode(
-            "ascii"), weightPath.encode("ascii"), 0, 1)  # batch size = 1
-    if metaMain is None:
-        metaMain = darknet.load_meta(metaPath.encode("ascii"))
+    network,class_names,class_colors=darknet.load_network(configPath,metaPath,weightPath,batch_size=1)
     if altNames is None:
         try:
             with open(metaPath) as metaFH:
@@ -103,7 +97,7 @@ def YOLO(image_list):
 
         darknet.copy_image_from_bytes(darknet_image, image_rgb.tobytes())
 
-        detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
+        detections = darknet.detect_image(network, class_names, darknet_image, thresh=0.25)
         image = cvDrawBoxes(detections, image_rgb)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         cv2.imshow('Output', image)
@@ -115,8 +109,9 @@ if __name__ == "__main__":
 	#================================================================
     # 2. Purpose : Get the list of Input Image Files
     #================================================================  
-    image_path = "D:\YOLOv4\darknet-master\Input\\"			#  Directory of the image folder
-    image_list = glob.glob(image_path + "*.jpg")			#  Get list of Images
+    #image_path = "D:\YOLOv4\darknet-master\Input\\"			#  Directory of the image folder
+    image_path=os.path.abspath('.')
+    image_list=glob.glob(os.path.join(image_path,"*.jpg"))
     print(image_list)		
     #=================================================================#									
     YOLO(image_list)
